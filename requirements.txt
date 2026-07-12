@@ -1,0 +1,10 @@
+--extra-index-url https://download.pytorch.org/whl/cpu
+fastapi
+uvicorn
+pydantic
+torch
+transformers
+pyahocorasick
+hgtk
+six
+rapidfuzz

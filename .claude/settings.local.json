@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 -c \"import docx2txt\")",
+      "Bash(pip show *)",
+      "Bash(antiword \"[참가신청서]2026_파이썬SW활용경진대회_OOO팀.doc\")",
+      "Bash(antiword \"[최종보고서]2026_파이썬SW활용경진대회_OOO팀.doc\")"
+    ]
+  }
+}

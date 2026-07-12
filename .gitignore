@@ -1,0 +1,18 @@
+# 인증키·개인정보 — 절대 커밋 금지
+secrets.json
+public data api/
+*인증키*.txt
+
+# 대용량 — GitHub 용량 제한
+models/
+data/*.db
+
+# 대회 제출 서류 (코드 저장소에 불필요)
+*.doc
+*.docx
+*.png
+
+# 파이썬
+__pycache__/
+*.pyc
+.venv/

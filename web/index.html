@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>약톡 — 약물 상호작용 확인 챗봇</title>
+<style>
+  :root { --bg:#f4f6fb; --card:#ffffff; --accent:#3b6ef5; --danger:#e2504b; --warn:#e8912d; --safe:#2f9e6e; --text:#1c2333; --muted:#7a839c; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif; background:var(--bg); color:var(--text); height:100dvh; display:flex; flex-direction:column; }
+  header { background:var(--card); padding:14px 20px; border-bottom:1px solid #e3e7f0; display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+  header h1 { font-size:18px; font-weight:700; }
+  header .sub { font-size:12px; color:var(--muted); }
+  .modes { margin-left:auto; display:flex; gap:10px; align-items:center; font-size:13px; flex-wrap:wrap; }
+  .modes label { display:flex; align-items:center; gap:4px; cursor:pointer; background:#eef1f8; padding:6px 10px; border-radius:16px; }
+  .modes input[type=checkbox] { accent-color:var(--accent); }
+  .modes input[type=number] { width:56px; padding:4px 6px; border:1px solid #d5dae6; border-radius:8px; font-size:13px; }
+  #chat { flex:1; overflow-y:auto; padding:20px; display:flex; flex-direction:column; gap:12px; max-width:760px; width:100%; margin:0 auto; }
+  .msg { max-width:80%; padding:12px 15px; border-radius:16px; font-size:14.5px; line-height:1.65; white-space:pre-wrap; word-break:break-word; }
+  .user { align-self:flex-end; background:var(--accent); color:#fff; border-bottom-right-radius:4px; }
+  .bot { align-self:flex-start; background:var(--card); border:1px solid #e3e7f0; border-bottom-left-radius:4px; }
+  .bot.금기 { border-left:4px solid var(--danger); }
+  .bot.주의 { border-left:4px solid var(--warn); }
+  .bot.정보없음 { border-left:4px solid var(--safe); }
+  .options { display:flex; gap:8px; flex-wrap:wrap; align-self:flex-start; }
+  .options button { border:1px solid var(--accent); color:var(--accent); background:#fff; padding:7px 12px; border-radius:16px; font-size:13px; cursor:pointer; }
+  .options button:hover { background:var(--accent); color:#fff; }
+  footer { background:var(--card); border-top:1px solid #e3e7f0; padding:12px; }
+  .inputrow { max-width:760px; margin:0 auto; display:flex; gap:8px; }
+  #input { flex:1; padding:12px 14px; border:1px solid #d5dae6; border-radius:12px; font-size:15px; outline:none; }
+  #input:focus { border-color:var(--accent); }
+  #send { background:var(--accent); color:#fff; border:none; border-radius:12px; padding:0 20px; font-size:15px; cursor:pointer; }
+  #send:disabled { opacity:.5; }
+  .typing { color:var(--muted); font-size:13px; }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>💊 약톡</h1>
+    <div class="sub">식약처 공공데이터 기반 약물 상호작용 확인</div>
+  </div>
+  <div class="modes">
+    <label><input type="checkbox" id="elderly"> 노인</label>
+    <label><input type="checkbox" id="pregnant"> 임산부</label>
+    <label>나이 <input type="number" id="age" min="0" max="120" placeholder="-"></label>
+  </div>
+</header>
+
+<div id="chat"></div>
+
+<footer>
+  <div class="inputrow">
+    <input id="input" placeholder="예: 타이레놀이랑 판콜 같이 먹어도 돼?" autocomplete="off">
+    <button id="send">전송</button>
+  </div>
+</footer>
+
+<script src="config.js"></script>
+<script>
+// API 주소는 config.js에서 설정 (로컬 데모: 빈 문자열 = 동일 서버)
+const API_BASE = window.API_BASE || '';
+
+const chat = document.getElementById('chat');
+const input = document.getElementById('input');
+const sendBtn = document.getElementById('send');
+
+function addMsg(text, cls, level) {
+  const div = document.createElement('div');
+  div.className = 'msg ' + cls + (level ? ' ' + level : '');
+  div.textContent = text;
+  chat.appendChild(div);
+  chat.scrollTop = chat.scrollHeight;
+  return div;
+}
+
+function addOptions(options, onPick) {
+  const wrap = document.createElement('div');
+  wrap.className = 'options';
+  options.forEach(opt => {
+    const b = document.createElement('button');
+    b.textContent = opt;
+    b.onclick = () => { wrap.remove(); onPick(opt); };
+    wrap.appendChild(b);
+  });
+  chat.appendChild(wrap);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+let pendingContext = null; // 되묻기 시 이전 문장을 기억해 선택지를 끼워 재질의
+
+async function send(text, displayText) {
+  addMsg(displayText ?? text, 'user');
+  input.value = '';
+  sendBtn.disabled = true;
+  const typing = addMsg('확인 중...', 'bot typing');
+  try {
+    const body = {
+      message: text,
+      elderly: document.getElementById('elderly').checked,
+      pregnant: document.getElementById('pregnant').checked,
+      age: document.getElementById('age').value ? Number(document.getElementById('age').value) : null,
+    };
+    const res = await fetch(API_BASE + '/api/chat', {
+      method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body),
+    });
+    const data = await res.json();
+    typing.remove();
+    addMsg(data.reply, 'bot', data.level);
+    if (data.clarify) {
+      const confirmedNames = (data.drugs || []).map(d => d.name);
+      const rest = data.clarify.rest || [];  // 아직 해소 안 된 항목 (예: 두 번째 카테고리어)
+      pendingContext = { base: text, confirmed: confirmedNames, rest };
+      addOptions(data.clarify.options, pick => {
+        const parts = [...pendingContext.confirmed, pick, ...pendingContext.rest];
+        const q = parts.join('이랑 ') + ' 같이 먹어도 돼?';
+        send(q, pick);
+      });
+    } else {
+      pendingContext = null;
+    }
+  } catch (e) {
+    typing.remove();
+    addMsg('서버에 연결할 수 없어요. 백엔드가 실행 중인지 확인해 주세요.', 'bot');
+  }
+  sendBtn.disabled = false;
+  input.focus();
+}
+
+sendBtn.onclick = () => { if (input.value.trim()) send(input.value.trim()); };
+input.addEventListener('keydown', e => { if (e.key === 'Enter' && input.value.trim()) send(input.value.trim()); });
+
+addMsg('안녕하세요! 약물 상호작용 확인 챗봇 약톡이에요.\n두 가지 약을 함께 드셔도 되는지, 부작용·복용법이 궁금한 약이 있는지 물어보세요.\n\n예) "타이레놀이랑 판콜 같이 먹어도 돼?"\n예) "게보린 부작용 알려줘"', 'bot');
+</script>
+</body>
+</html>
