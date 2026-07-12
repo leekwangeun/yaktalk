@@ -11,6 +11,16 @@ data/*.db
 *.doc
 *.docx
 *.png
+*.pptx
+presentation/
+
+# 개발용 가이드·내부 지침·설정 (공개 저장소 불필요)
+*GUIDE*.md
+CLAUDE.md
+render.yaml
+.claude/
+기획서_약물상호작용챗봇.md
+보고서초안_데이터와모델설계.md
 
 # 파이썬
 __pycache__/
