@@ -7,8 +7,8 @@
 
 ## 라이브 데모
 
-- **백엔드 API (챗봇 구동 중)**: https://kwangeun2-yaktalk-api.hf.space
-- 프론트엔드: Vercel 배포 예정
+- **웹 챗봇 (바로 사용)**: https://yaktalk-one.vercel.app
+- 백엔드 API: https://kwangeun2-yaktalk-api.hf.space
 
 예) *"타이레놀이랑 판콜 같이 먹어도 돼?"* → 두 약 모두 아세트아미노펜 함유 → **성분중복 주의** 안내
 
