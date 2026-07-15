@@ -110,10 +110,17 @@ async function send(text, displayText) {
     if (data.clarify) {
       const confirmedNames = (data.drugs || []).map(d => d.name);
       const rest = data.clarify.rest || [];  // 아직 해소 안 된 항목 (예: 두 번째 카테고리어)
-      pendingContext = { base: text, confirmed: confirmedNames, rest };
+      pendingContext = { base: text, confirmed: confirmedNames, rest, intent: data.intent };
       addOptions(data.clarify.options, pick => {
         const parts = [...pendingContext.confirmed, pick, ...pendingContext.rest];
-        const q = parts.join('이랑 ') + ' 같이 먹어도 돼?';
+        let q;
+        if (parts.length >= 2) {
+          q = parts.join('이랑 ') + ' 같이 먹어도 돼?';
+        } else {
+          // 약이 하나뿐이면 되묻기 전 원래 의도(부작용·복용법·성분)를 보존해 재질의
+          const suffix = { '부작용': ' 부작용', '복용법': ' 복용법 알려줘', '성분': ' 성분' }[pendingContext.intent] || '';
+          q = pick + suffix;
+        }
         send(q, pick);
       });
     } else {
