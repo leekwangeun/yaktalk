@@ -2,142 +2,632 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>약톡 — 약물 상호작용 확인 챗봇</title>
+<meta name="description" content="식약처 공공데이터를 근거로 약을 함께 먹어도 되는지 확인해 주는 챗봇">
+<meta name="theme-color" content="#0f9488">
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard-dynamic-subset.css">
 <style>
-  :root { --bg:#f4f6fb; --card:#ffffff; --accent:#3b6ef5; --danger:#e2504b; --warn:#e8912d; --safe:#2f9e6e; --text:#1c2333; --muted:#7a839c; }
-  * { box-sizing:border-box; margin:0; padding:0; }
-  body { font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif; background:var(--bg); color:var(--text); height:100dvh; display:flex; flex-direction:column; }
-  header { background:var(--card); padding:14px 20px; border-bottom:1px solid #e3e7f0; display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
-  header h1 { font-size:18px; font-weight:700; }
-  header .sub { font-size:12px; color:var(--muted); }
-  .modes { margin-left:auto; display:flex; gap:10px; align-items:center; font-size:13px; flex-wrap:wrap; }
-  .modes label { display:flex; align-items:center; gap:4px; cursor:pointer; background:#eef1f8; padding:6px 10px; border-radius:16px; }
-  .modes input[type=checkbox] { accent-color:var(--accent); }
-  .modes input[type=number] { width:56px; padding:4px 6px; border:1px solid #d5dae6; border-radius:8px; font-size:13px; }
-  #chat { flex:1; overflow-y:auto; padding:20px; display:flex; flex-direction:column; gap:12px; max-width:760px; width:100%; margin:0 auto; }
-  .msg { max-width:80%; padding:12px 15px; border-radius:16px; font-size:14.5px; line-height:1.65; white-space:pre-wrap; word-break:break-word; }
-  .user { align-self:flex-end; background:var(--accent); color:#fff; border-bottom-right-radius:4px; }
-  .bot { align-self:flex-start; background:var(--card); border:1px solid #e3e7f0; border-bottom-left-radius:4px; }
-  .bot.금기 { border-left:4px solid var(--danger); }
-  .bot.주의 { border-left:4px solid var(--warn); }
-  .bot.정보없음 { border-left:4px solid var(--safe); }
-  .options { display:flex; gap:8px; flex-wrap:wrap; align-self:flex-start; }
-  .options button { border:1px solid var(--accent); color:var(--accent); background:#fff; padding:7px 12px; border-radius:16px; font-size:13px; cursor:pointer; }
-  .options button:hover { background:var(--accent); color:#fff; }
-  footer { background:var(--card); border-top:1px solid #e3e7f0; padding:12px; }
-  .inputrow { max-width:760px; margin:0 auto; display:flex; gap:8px; }
-  #input { flex:1; padding:12px 14px; border:1px solid #d5dae6; border-radius:12px; font-size:15px; outline:none; }
-  #input:focus { border-color:var(--accent); }
-  #send { background:var(--accent); color:#fff; border:none; border-radius:12px; padding:0 20px; font-size:15px; cursor:pointer; }
-  #send:disabled { opacity:.5; }
-  .typing { color:var(--muted); font-size:13px; }
+  :root{
+    --bg:#fbfbfa; --surface:#ffffff; --surface-2:#f5f5f3; --surface-3:#eeeeeb;
+    --border:#e6e6e1; --border-2:#d8d8d2;
+    --text:#1e1e1c; --text-2:#65655f; --text-3:#8f8f88;
+    --brand:#0f9488; --brand-hover:#0c7c72; --brand-soft:#e6f5f3; --on-brand:#ffffff;
+    --danger:#dc2626; --danger-soft:#fef2f2; --danger-border:#fbd5d5;
+    --warn:#c2740b; --warn-soft:#fffaeb; --warn-border:#fae3ba;
+    --safe:#047f5b; --safe-soft:#ecfdf5; --safe-border:#bbecd8;
+    --shadow:0 1px 2px rgba(20,20,18,.04), 0 8px 24px -12px rgba(20,20,18,.14);
+    --shadow-lg:0 2px 6px rgba(20,20,18,.05), 0 20px 48px -20px rgba(20,20,18,.22);
+    --radius:16px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#191918; --surface:#232322; --surface-2:#2b2b29; --surface-3:#343431;
+      --border:#383835; --border-2:#45454140;
+      --text:#ecece8; --text-2:#a5a59e; --text-3:#7d7d76;
+      --brand:#2bb3a3; --brand-hover:#35c4b3; --brand-soft:#16302e; --on-brand:#08211f;
+      --danger:#f87171; --danger-soft:#2c1a1a; --danger-border:#4d2626;
+      --warn:#e0a33e; --warn-soft:#2c2417; --warn-border:#4d3d1f;
+      --safe:#4ec99b; --safe-soft:#152a22; --safe-border:#24483a;
+      --shadow:0 1px 2px rgba(0,0,0,.3), 0 8px 24px -12px rgba(0,0,0,.5);
+      --shadow-lg:0 2px 6px rgba(0,0,0,.35), 0 20px 48px -20px rgba(0,0,0,.6);
+    }
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{height:100%;}
+  body{
+    font-family:'Pretendard Variable','Pretendard','Apple SD Gothic Neo','Malgun Gothic',system-ui,sans-serif;
+    background:var(--bg); color:var(--text);
+    display:flex; flex-direction:column; height:100dvh;
+    -webkit-font-smoothing:antialiased; word-break:keep-all;
+  }
+  button{font:inherit; color:inherit; cursor:pointer; border:none; background:none;}
+
+  /* ---------- header ---------- */
+  header{
+    background:color-mix(in srgb, var(--bg) 82%, transparent);
+    backdrop-filter:saturate(1.6) blur(12px);
+    border-bottom:1px solid var(--border);
+    position:sticky; top:0; z-index:20;
+    padding:env(safe-area-inset-top) 0 0;
+  }
+  .headbar{
+    max-width:768px; margin:0 auto; padding:11px 16px;
+    display:flex; align-items:center; gap:11px;
+  }
+  .brand{display:flex; align-items:center; gap:10px; min-width:0;}
+  .brand svg{width:32px; height:32px; flex-shrink:0;}
+  .brand .name{font-size:16px; font-weight:800; letter-spacing:-.01em; line-height:1.2;}
+  .brand .sub{font-size:11.5px; color:var(--text-3); line-height:1.3; margin-top:1px;}
+  .cond-btn{
+    margin-left:auto; display:flex; align-items:center; gap:6px;
+    background:var(--surface); border:1px solid var(--border);
+    padding:7px 13px; border-radius:999px; font-size:13px; font-weight:600;
+    color:var(--text-2); transition:border-color .15s, color .15s;
+  }
+  .cond-btn:hover{border-color:var(--border-2); color:var(--text);}
+  .cond-btn[aria-expanded="true"]{background:var(--brand-soft); border-color:transparent; color:var(--brand);}
+  .cond-btn .dot{width:6px; height:6px; border-radius:50%; background:var(--brand); display:none;}
+  .cond-btn.active .dot{display:block;}
+  .cond-panel{
+    max-width:768px; margin:0 auto; padding:0 16px;
+    display:grid; grid-template-rows:0fr; transition:grid-template-rows .22s ease;
+  }
+  .cond-panel[data-open="true"]{grid-template-rows:1fr;}
+  .cond-inner{overflow:hidden;}
+  .cond-hint{
+    max-width:768px; margin:0 auto; padding:0 16px 10px;
+    display:flex; align-items:flex-start; gap:7px;
+    font-size:12.5px; color:var(--text-2); line-height:1.55;
+  }
+  .cond-hint svg{color:var(--brand); flex-shrink:0; margin-top:2px;}
+  .cond-hint b{color:var(--text); font-weight:700;}
+  .cond-fields{
+    display:flex; flex-wrap:wrap; gap:8px; align-items:center;
+    padding:0 0 13px; font-size:13.5px;
+  }
+  .chk{
+    display:flex; align-items:center; gap:7px; cursor:pointer;
+    background:var(--surface); border:1px solid var(--border);
+    padding:8px 14px; border-radius:999px; font-weight:600; color:var(--text-2);
+    transition:background .15s, border-color .15s, color .15s;
+  }
+  .chk:has(input:checked){background:var(--brand-soft); border-color:transparent; color:var(--brand);}
+  .chk input{accent-color:var(--brand); width:15px; height:15px; cursor:pointer;}
+  .agefield{
+    display:flex; align-items:center; gap:7px;
+    background:var(--surface); border:1px solid var(--border);
+    padding:7px 10px 7px 14px; border-radius:999px; font-weight:600; color:var(--text-2);
+  }
+  .agefield input{
+    width:52px; padding:3px 8px; border:1px solid var(--border); border-radius:8px;
+    background:var(--bg); color:var(--text); font:inherit; font-size:13px; text-align:center;
+  }
+  .agefield input:focus{outline:2px solid var(--brand); outline-offset:-1px; border-color:transparent;}
+
+  /* ---------- chat scroll area ---------- */
+  #scroll{flex:1; overflow-y:auto; overscroll-behavior:contain; scrollbar-width:thin;}
+  #chat{max-width:768px; margin:0 auto; padding:24px 16px 8px; display:flex; flex-direction:column; gap:20px;}
+
+  /* ---------- empty state ---------- */
+  .empty{
+    display:flex; flex-direction:column; align-items:center; text-align:center;
+    padding:44px 4px 12px; animation:rise .45s cubic-bezier(.2,.7,.3,1);
+  }
+  .empty .mark{width:60px; height:60px; margin-bottom:18px;}
+  .empty h2{font-size:24px; font-weight:800; letter-spacing:-.02em; line-height:1.35;}
+  .empty p{margin-top:9px; font-size:14.5px; color:var(--text-2); line-height:1.65; max-width:400px;}
+  .sugg{
+    margin-top:26px; width:100%; display:grid; gap:9px;
+    grid-template-columns:repeat(2, minmax(0,1fr));
+  }
+  @media (max-width:560px){ .sugg{grid-template-columns:1fr;} }
+  .sugg button{
+    display:flex; align-items:flex-start; gap:11px; text-align:left;
+    background:var(--surface); border:1px solid var(--border); border-radius:14px;
+    padding:14px 15px; transition:border-color .15s, transform .15s, box-shadow .15s;
+  }
+  .sugg button:hover{border-color:var(--brand); transform:translateY(-1px); box-shadow:var(--shadow);}
+  .sugg .ico{color:var(--brand); flex-shrink:0; margin-top:1px;}
+  .sugg .txt{display:flex; flex-direction:column; gap:3px; min-width:0;}
+  .sugg .q{display:block; font-size:14px; font-weight:700; line-height:1.45;}
+  .sugg .why{display:block; font-size:12px; color:var(--text-3); line-height:1.45;}
+
+  /* ---------- messages ---------- */
+  .row{display:flex; animation:rise .3s cubic-bezier(.2,.7,.3,1);}
+  @keyframes rise{from{opacity:0; transform:translateY(9px);} to{opacity:1; transform:none;}}
+  .row.me{justify-content:flex-end;}
+  .bubble-me{
+    background:var(--brand); color:var(--on-brand);
+    padding:11px 16px; border-radius:20px 20px 5px 20px;
+    font-size:15px; line-height:1.6; font-weight:500; max-width:min(84%, 520px);
+    white-space:pre-wrap; word-break:break-word;
+  }
+  .row.bot{gap:11px; align-items:flex-start;}
+  .avatar{
+    width:29px; height:29px; border-radius:9px; background:var(--brand-soft);
+    display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px;
+  }
+  .answer{min-width:0; flex:1; font-size:15px; line-height:1.72;}
+  .answer p{margin:0; white-space:pre-wrap; word-break:break-word;}
+  .answer p + p{margin-top:9px;}
+
+  .badge{
+    display:inline-flex; align-items:center; gap:7px;
+    padding:6px 13px 6px 10px; border-radius:999px;
+    font-size:13.5px; font-weight:800; letter-spacing:-.01em; margin-bottom:11px;
+  }
+  .badge svg{flex-shrink:0;}
+  .badge[data-l="금기"]{background:var(--danger-soft); color:var(--danger); box-shadow:inset 0 0 0 1px var(--danger-border);}
+  .badge[data-l="주의"]{background:var(--warn-soft); color:var(--warn); box-shadow:inset 0 0 0 1px var(--warn-border);}
+  .badge[data-l="정보없음"]{background:var(--safe-soft); color:var(--safe); box-shadow:inset 0 0 0 1px var(--safe-border);}
+  .badge[data-l="정보"]{background:var(--surface-2); color:var(--text-2); box-shadow:inset 0 0 0 1px var(--border);}
+
+  .pills{display:flex; flex-wrap:wrap; gap:7px; align-items:center; margin:11px 0;}
+  .pill{
+    background:var(--surface); border:1px solid var(--border); border-radius:9px;
+    padding:7px 11px; font-size:13px; font-weight:700; line-height:1.35;
+  }
+  .plus{color:var(--text-3); font-size:14px; font-weight:700;}
+
+  .caption{
+    display:inline-flex; align-items:center; gap:6px; margin-top:2px;
+    font-size:12px; color:var(--text-3); line-height:1.5;
+  }
+  .caption::before{
+    content:''; width:5px; height:5px; border-radius:50%;
+    background:var(--brand); opacity:.55; flex-shrink:0;
+  }
+  .evid{margin-top:12px; display:flex; flex-direction:column; gap:8px;}
+  .evid-label{font-size:12px; font-weight:800; color:var(--text-3); letter-spacing:.02em;}
+  .finding{
+    background:var(--surface); border:1px solid var(--border);
+    border-left:3px solid var(--border-2); border-radius:11px;
+    padding:12px 14px; font-size:13.5px; line-height:1.68; color:var(--text-2);
+  }
+  .finding[data-l="금기"]{border-left-color:var(--danger); background:var(--danger-soft);}
+  .finding[data-l="주의"]{border-left-color:var(--warn); background:var(--warn-soft);}
+  .finding .tag{
+    display:inline-block; font-size:11.5px; font-weight:800; color:var(--text);
+    background:var(--surface-3); border-radius:6px; padding:2px 7px; margin-right:7px;
+    vertical-align:1px;
+  }
+  .note{
+    margin-top:13px; padding-top:11px; border-top:1px dashed var(--border);
+    font-size:12px; color:var(--text-3); line-height:1.6;
+  }
+
+  .opts{display:flex; flex-wrap:wrap; gap:7px; margin-top:12px;}
+  .opts button{
+    background:var(--surface); border:1px solid var(--border); border-radius:999px;
+    padding:8px 15px; font-size:13.5px; font-weight:700; color:var(--brand);
+    transition:background .15s, border-color .15s, transform .12s;
+  }
+  .opts button:hover{background:var(--brand); border-color:transparent; color:var(--on-brand); transform:translateY(-1px);}
+
+  /* typing */
+  .dots{display:flex; gap:5px; align-items:center; padding:9px 0 4px;}
+  .dots i{width:7px; height:7px; border-radius:50%; background:var(--text-3); animation:blink 1.3s ease-in-out infinite;}
+  .dots i:nth-child(2){animation-delay:.18s;} .dots i:nth-child(3){animation-delay:.36s;}
+  @keyframes blink{0%,60%,100%{opacity:.25; transform:translateY(0);} 30%{opacity:1; transform:translateY(-3px);}}
+  .waking{font-size:12.5px; color:var(--text-3); margin-top:2px; line-height:1.55;}
+
+  /* ---------- composer ---------- */
+  footer{
+    background:linear-gradient(to top, var(--bg) 62%, transparent);
+    padding:8px 16px calc(14px + env(safe-area-inset-bottom));
+    position:sticky; bottom:0; z-index:10;
+  }
+  .composer{
+    max-width:768px; margin:0 auto;
+    display:flex; align-items:flex-end; gap:8px;
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:24px; padding:7px 7px 7px 17px;
+    box-shadow:var(--shadow); transition:border-color .15s, box-shadow .15s;
+  }
+  .composer:focus-within{border-color:var(--brand); box-shadow:var(--shadow-lg);}
+  #input{
+    flex:1; border:none; background:none; color:var(--text);
+    font:inherit; font-size:15.5px; line-height:1.55; resize:none; outline:none;
+    max-height:132px; padding:9px 0; min-width:0;
+  }
+  #input::placeholder{color:var(--text-3);}
+  #send{
+    width:38px; height:38px; border-radius:50%; background:var(--brand); color:var(--on-brand);
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+    transition:background .15s, opacity .15s, transform .12s;
+  }
+  #send:hover:not(:disabled){background:var(--brand-hover); transform:scale(1.05);}
+  #send:disabled{opacity:.32; cursor:default;}
+  .disclaimer{
+    max-width:768px; margin:9px auto 0; text-align:center;
+    font-size:11.5px; color:var(--text-3); line-height:1.5;
+  }
+  .sr{position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap;}
+  @media (prefers-reduced-motion: reduce){ *{animation:none !important; transition:none !important;} }
 </style>
 </head>
 <body>
+
 <header>
-  <div>
-    <h1>💊 약톡</h1>
-    <div class="sub">식약처 공공데이터 기반 약물 상호작용 확인</div>
+  <div class="headbar">
+    <div class="brand">
+      <svg viewBox="0 0 100 100" role="img" aria-label="약톡 로고">
+        <path d="M50 85 C 21 65 11 44 24 31 C 33 22 46 25 50 35 C 54 25 67 22 76 31 C 89 44 79 65 50 85 Z" fill="#16a89a"/>
+        <circle cx="37" cy="45" r="10.5" fill="#fff"/>
+        <g transform="rotate(-45 61 58)">
+          <clipPath id="cap"><rect x="47.5" y="51" width="27" height="14" rx="7"/></clipPath>
+          <g clip-path="url(#cap)">
+            <rect x="47.5" y="51" width="13.5" height="14" fill="#fff"/>
+            <rect x="61" y="51" width="13.5" height="14" fill="#e8654a"/>
+          </g>
+          <rect x="47.5" y="51" width="27" height="14" rx="7" fill="none" stroke="#fff" stroke-width="2"/>
+          <line x1="61" y1="51" x2="61" y2="65" stroke="#fff" stroke-width="1.4"/>
+        </g>
+      </svg>
+      <div>
+        <div class="name">약톡</div>
+        <div class="sub">식약처 공공데이터 기반 상호작용 확인</div>
+      </div>
+    </div>
+    <button class="cond-btn" id="condBtn" aria-expanded="true" aria-controls="condPanel">
+      <span class="dot"></span>
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/><circle cx="9" cy="6" r="2" fill="currentColor" stroke="none"/><circle cx="15" cy="12" r="2" fill="currentColor" stroke="none"/><circle cx="8" cy="18" r="2" fill="currentColor" stroke="none"/></svg>
+      복용 조건
+    </button>
   </div>
-  <div class="modes">
-    <label><input type="checkbox" id="elderly"> 노인</label>
-    <label><input type="checkbox" id="pregnant"> 임산부</label>
-    <label>나이 <input type="number" id="age" min="0" max="120" placeholder="-"></label>
+  <div class="cond-hint">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>
+    <span><b>복용 조건</b>에서 노인·임산부·나이를 켜두면 <b>노인주의·임부금기·연령금기</b>까지 함께 확인해요.</span>
+  </div>
+  <div class="cond-panel" id="condPanel" data-open="true">
+    <div class="cond-inner">
+      <div class="cond-fields">
+        <label class="chk"><input type="checkbox" id="elderly"> 노인</label>
+        <label class="chk"><input type="checkbox" id="pregnant"> 임산부</label>
+        <label class="agefield">나이 <input type="number" id="age" min="0" max="120" placeholder="—" aria-label="나이"></label>
+      </div>
+    </div>
   </div>
 </header>
 
-<div id="chat"></div>
+<div id="scroll">
+  <div id="chat" aria-live="polite"></div>
+</div>
 
 <footer>
-  <div class="inputrow">
-    <input id="input" placeholder="예: 타이레놀이랑 판콜 같이 먹어도 돼?" autocomplete="off">
-    <button id="send">전송</button>
+  <div class="composer">
+    <textarea id="input" rows="1" placeholder="함께 먹어도 되는지 물어보세요" autocomplete="off" aria-label="질문 입력"></textarea>
+    <button id="send" disabled aria-label="전송">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+    </button>
   </div>
+  <p class="disclaimer">식약처 공공데이터 기반 참고 정보입니다 · 정확한 판단은 약사·의사와 상담하세요</p>
 </footer>
 
 <script src="config.js"></script>
 <script>
-// API 주소는 config.js에서 설정 (로컬 데모: 빈 문자열 = 동일 서버)
 const API_BASE = window.API_BASE || '';
 
-const chat = document.getElementById('chat');
-const input = document.getElementById('input');
-const sendBtn = document.getElementById('send');
+const chat   = document.getElementById('chat');
+const scroll = document.getElementById('scroll');
+const input  = document.getElementById('input');
+const sendBtn= document.getElementById('send');
 
-function addMsg(text, cls, level) {
-  const div = document.createElement('div');
-  div.className = 'msg ' + cls + (level ? ' ' + level : '');
-  div.textContent = text;
-  chat.appendChild(div);
-  chat.scrollTop = chat.scrollHeight;
-  return div;
+/* ---------- 복용 조건 패널 ---------- */
+const condBtn = document.getElementById('condBtn');
+const condPanel = document.getElementById('condPanel');
+const elderly = document.getElementById('elderly');
+const pregnant = document.getElementById('pregnant');
+const age = document.getElementById('age');
+
+condBtn.onclick = () => {
+  const open = condPanel.dataset.open === 'true';
+  condPanel.dataset.open = String(!open);
+  condBtn.setAttribute('aria-expanded', String(!open));
+};
+function syncCondDot(){
+  condBtn.classList.toggle('active', elderly.checked || pregnant.checked || !!age.value);
+}
+[elderly, pregnant, age].forEach(el => el.addEventListener('change', syncCondDot));
+
+// 처음에는 펼쳐 두어 조건 설정이 가능하다는 걸 바로 보여주고,
+// 첫 질문을 보내면 접는다. 켜둔 조건은 버튼의 점으로 계속 표시된다.
+function collapseCond(){
+  if (condPanel.dataset.open === 'true'){
+    condPanel.dataset.open = 'false';
+    condBtn.setAttribute('aria-expanded', 'false');
+  }
 }
 
-function addOptions(options, onPick) {
+/* ---------- 예시 질문 ---------- */
+const SUGGESTIONS = [
+  { q:'타이레놀이랑 판콜 같이 먹어도 돼?', why:'정확한 이름을 몰라도 함께 찾아드려요' },
+  { q:'심바스타틴, 클래리스로마이신, 타이레놀 같이 먹어도 돼?', why:'약 세 개도 모든 조합을 한 번에' },
+  { q:'게보린 부작용 알려줘', why:'약 하나의 부작용도 확인' },
+  { q:'타이레놀 복용법 알려줘', why:'용량과 복용 간격 안내' },
+];
+
+function renderEmpty(){
   const wrap = document.createElement('div');
-  wrap.className = 'options';
+  wrap.className = 'empty';
+  wrap.innerHTML = `
+    <svg class="mark" viewBox="0 0 100 100" role="img" aria-label="약톡">
+      <path d="M50 85 C 21 65 11 44 24 31 C 33 22 46 25 50 35 C 54 25 67 22 76 31 C 89 44 79 65 50 85 Z" fill="#16a89a"/>
+      <circle cx="37" cy="45" r="10.5" fill="#fff"/>
+      <g transform="rotate(-45 61 58)">
+        <clipPath id="cap2"><rect x="47.5" y="51" width="27" height="14" rx="7"/></clipPath>
+        <g clip-path="url(#cap2)">
+          <rect x="47.5" y="51" width="13.5" height="14" fill="#fff"/>
+          <rect x="61" y="51" width="13.5" height="14" fill="#e8654a"/>
+        </g>
+        <rect x="47.5" y="51" width="27" height="14" rx="7" fill="none" stroke="#fff" stroke-width="2"/>
+        <line x1="61" y1="51" x2="61" y2="65" stroke="#fff" stroke-width="1.4"/>
+      </g>
+    </svg>
+    <h2>같이 먹어도 될까요?</h2>
+    <p>약 이름을 아는 대로 적어 주세요. 성분이 겹치는지, 함께 먹으면 안 되는 조합인지 식약처 데이터로 확인해 드릴게요.</p>
+    <div class="sugg"></div>`;
+  const grid = wrap.querySelector('.sugg');
+  SUGGESTIONS.forEach(s => {
+    const b = document.createElement('button');
+    b.innerHTML = `
+      <span class="ico"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg></span>
+      <span class="txt"><span class="q"></span><span class="why"></span></span>`;
+    b.querySelector('.q').textContent = s.q;
+    b.querySelector('.why').textContent = s.why;
+    b.onclick = () => send(s.q);
+    grid.appendChild(b);
+  });
+  chat.appendChild(wrap);
+}
+
+function clearEmpty(){
+  const e = chat.querySelector('.empty');
+  if (e) e.remove();
+}
+
+/* ---------- 메시지 렌더 ---------- */
+function atBottom(){ return scroll.scrollHeight - scroll.scrollTop - scroll.clientHeight < 120; }
+function toBottom(force){
+  if (force || atBottom()) requestAnimationFrame(() => scroll.scrollTo({top:scroll.scrollHeight, behavior:'smooth'}));
+}
+
+function addUser(text){
+  const row = document.createElement('div');
+  row.className = 'row me';
+  const b = document.createElement('div');
+  b.className = 'bubble-me';
+  b.textContent = text;
+  row.appendChild(b);
+  chat.appendChild(row);
+  toBottom(true);
+}
+
+const AVATAR = `<div class="avatar"><svg width="17" height="17" viewBox="0 0 100 100" aria-hidden="true">
+  <path d="M50 85 C 21 65 11 44 24 31 C 33 22 46 25 50 35 C 54 25 67 22 76 31 C 89 44 79 65 50 85 Z" fill="#16a89a"/></svg></div>`;
+
+function addBotRow(){
+  const row = document.createElement('div');
+  row.className = 'row bot';
+  row.innerHTML = AVATAR + '<div class="answer"></div>';
+  chat.appendChild(row);
+  return row.querySelector('.answer');
+}
+
+const LEVEL_ICON = {
+  '금기':'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M6.5 6.5l11 11"/></svg>',
+  '주의':'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4.5M12 17.5h.01M10.3 3.9L2.5 18a1.5 1.5 0 0 0 1.3 2.2h16.4a1.5 1.5 0 0 0 1.3-2.2L13.7 3.9a1.5 1.5 0 0 0-2.6 0z"/></svg>',
+  '정보없음':'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.6 2.6L16 9.5"/></svg>',
+  '정보':'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>',
+};
+const LEVEL_TEXT = { '금기':'함께 복용 금지', '주의':'주의 필요', '정보없음':'알려진 문제 없음' };
+
+function renderPills(box, names){
+  const p = document.createElement('div');
+  p.className = 'pills';
+  names.forEach((n, i) => {
+    if (i){ const s = document.createElement('span'); s.className = 'plus'; s.textContent = '+'; p.appendChild(s); }
+    const c = document.createElement('span'); c.className = 'pill'; c.textContent = n; p.appendChild(c);
+  });
+  box.appendChild(p);
+}
+
+/* 검증된 응답 텍스트를 그대로 살리되, 줄 단위로 구조를 읽어 카드로 표현 */
+function renderReply(box, reply, level, drugs){
+  const lines = String(reply || '').split('\n').map(l => l.trim());
+  const EMOJI = /^(?:🔴|🟠|🟢|💊|⚠️|ℹ️)\s*/u;
+  // 약이 2개면 "A + B", 3개 이상이면 "A, B, C"로 오므로 구분자에 기대지 않고
+  // 응답의 drugs 배열과 대조해 약 이름 줄을 찾아낸다
+  const nameSet = new Set((drugs || []).map(d => d && d.name).filter(Boolean));
+  let headlineDone = false, sawFinding = false;
+
+  if (level && LEVEL_TEXT[level]){
+    const b = document.createElement('div');
+    b.className = 'badge'; b.dataset.l = level;
+    b.innerHTML = (LEVEL_ICON[level] || '') + '<span></span>';
+    b.querySelector('span').textContent = LEVEL_TEXT[level];
+    box.appendChild(b);
+  }
+
+  for (const raw of lines){
+    if (!raw) continue;
+
+    if (raw.startsWith('※')){
+      const n = document.createElement('div');
+      n.className = 'note';
+      n.textContent = raw.replace(/^※\s*/, '');
+      box.appendChild(n);
+      continue;
+    }
+    if (raw.startsWith('•')){
+      sawFinding = true;
+      const m = raw.match(/^•\s*\[([^\]]{1,20})\]\s*([\s\S]*)$/);
+      const f = document.createElement('div');
+      f.className = 'finding';
+      if (level) f.dataset.l = level;
+      if (m){
+        const tag = document.createElement('span');
+        tag.className = 'tag'; tag.textContent = m[1];
+        f.appendChild(tag);
+        f.appendChild(document.createTextNode(m[2]));
+      } else {
+        f.textContent = raw.replace(/^•\s*/, '');
+      }
+      (box.querySelector('.evid') || (() => {
+        const g = document.createElement('div'); g.className = 'evid'; box.appendChild(g); return g;
+      })()).appendChild(f);
+      continue;
+    }
+    if (/^\[[^\]]{1,20}\]$/.test(raw)){
+      const g = document.createElement('div');
+      g.className = 'evid';
+      const l = document.createElement('div');
+      l.className = 'evid-label'; l.textContent = raw.slice(1, -1);
+      g.appendChild(l); box.appendChild(g);
+      continue;
+    }
+    // 약 이름만 나열된 줄 → 칩으로 (구분자가 '+'든 ','든 drugs 배열과 대조해 판별)
+    if (!sawFinding && !EMOJI.test(raw) && nameSet.size >= 2){
+      const parts = raw.split(/\s*[,+]\s*/).map(s => s.trim()).filter(Boolean);
+      if (parts.length >= 2 && parts.every(p => nameSet.has(p))){
+        renderPills(box, parts);
+        continue;
+      }
+    }
+    // drugs 배열이 없을 때를 위한 예비 처리: "A + B"
+    if (!sawFinding && raw.includes(' + ') && raw.length < 220 && !EMOJI.test(raw)){
+      const names = raw.split(' + ').map(s => s.trim()).filter(Boolean);
+      if (names.length >= 2){ renderPills(box, names); continue; }
+    }
+    // "(약 3개를 모든 조합으로 확인했어요)" 같은 부연 설명
+    if (/^\(.+\)$/.test(raw) && raw.length < 80){
+      const c = document.createElement('div');
+      c.className = 'caption';
+      c.textContent = raw.slice(1, -1);
+      box.appendChild(c);
+      continue;
+    }
+    const p = document.createElement('p');
+    p.textContent = headlineDone ? raw : raw.replace(EMOJI, '');
+    headlineDone = true;
+    box.appendChild(p);
+  }
+  if (!box.childNodes.length){
+    const p = document.createElement('p'); p.textContent = reply || ''; box.appendChild(p);
+  }
+}
+
+function addOptions(box, options, onPick){
+  const wrap = document.createElement('div');
+  wrap.className = 'opts';
   options.forEach(opt => {
     const b = document.createElement('button');
     b.textContent = opt;
     b.onclick = () => { wrap.remove(); onPick(opt); };
     wrap.appendChild(b);
   });
-  chat.appendChild(wrap);
-  chat.scrollTop = chat.scrollHeight;
+  box.appendChild(wrap);
+  toBottom();
 }
 
-let pendingContext = null; // 되묻기 시 이전 문장을 기억해 선택지를 끼워 재질의
+/* ---------- 전송 ---------- */
+let pendingContext = null;  // 되묻기 시 이전 문장을 기억해 선택지를 끼워 재질의
+let busy = false;
 
-async function send(text, displayText) {
-  addMsg(displayText ?? text, 'user');
-  input.value = '';
+async function send(text, displayText){
+  if (busy) return;
+  busy = true;
+  clearEmpty();
+  collapseCond();
+  addUser(displayText ?? text);
+  input.value = ''; autoGrow(); syncSend();
   sendBtn.disabled = true;
-  const typing = addMsg('확인 중...', 'bot typing');
-  try {
-    const body = {
-      message: text,
-      elderly: document.getElementById('elderly').checked,
-      pregnant: document.getElementById('pregnant').checked,
-      age: document.getElementById('age').value ? Number(document.getElementById('age').value) : null,
-    };
+
+  const box = addBotRow();
+  const dots = document.createElement('div');
+  dots.className = 'dots';
+  dots.innerHTML = '<i></i><i></i><i></i>';
+  box.appendChild(dots);
+  toBottom(true);
+
+  // 서버가 잠들어 있으면 첫 응답이 늦어져, 기다리는 이유를 알려준다
+  const wakeTimer = setTimeout(() => {
+    if (!box.querySelector('.waking')){
+      const w = document.createElement('div');
+      w.className = 'waking';
+      w.textContent = '잠자던 서버를 깨우는 중이에요. 처음 한 번은 조금 걸릴 수 있어요.';
+      box.appendChild(w); toBottom();
+    }
+  }, 7000);
+
+  try{
     const res = await fetch(API_BASE + '/api/chat', {
-      method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body),
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        message: text,
+        elderly: elderly.checked,
+        pregnant: pregnant.checked,
+        age: age.value ? Number(age.value) : null,
+      }),
     });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
-    typing.remove();
-    addMsg(data.reply, 'bot', data.level);
-    if (data.clarify) {
+    clearTimeout(wakeTimer);
+    box.innerHTML = '';
+    renderReply(box, data.reply, data.level, data.drugs);
+
+    if (data.clarify){
       const confirmedNames = (data.drugs || []).map(d => d.name);
-      const rest = data.clarify.rest || [];  // 아직 해소 안 된 항목 (예: 두 번째 카테고리어)
-      pendingContext = { base: text, confirmed: confirmedNames, rest, intent: data.intent };
-      addOptions(data.clarify.options, pick => {
+      const rest = data.clarify.rest || [];   // 아직 해소 안 된 항목
+      pendingContext = { base:text, confirmed:confirmedNames, rest, intent:data.intent };
+      addOptions(box, data.clarify.options, pick => {
         const parts = [...pendingContext.confirmed, pick, ...pendingContext.rest];
         let q;
-        if (parts.length >= 2) {
+        if (parts.length >= 2){
           q = parts.join('이랑 ') + ' 같이 먹어도 돼?';
         } else {
           // 약이 하나뿐이면 되묻기 전 원래 의도(부작용·복용법·성분)를 보존해 재질의
-          const suffix = { '부작용': ' 부작용', '복용법': ' 복용법 알려줘', '성분': ' 성분' }[pendingContext.intent] || '';
+          const suffix = { '부작용':' 부작용', '복용법':' 복용법 알려줘', '성분':' 성분' }[pendingContext.intent] || '';
           q = pick + suffix;
         }
+        busy = false;
         send(q, pick);
       });
     } else {
       pendingContext = null;
     }
-  } catch (e) {
-    typing.remove();
-    addMsg('서버에 연결할 수 없어요. 백엔드가 실행 중인지 확인해 주세요.', 'bot');
+  } catch(e){
+    clearTimeout(wakeTimer);
+    box.innerHTML = '';
+    const p = document.createElement('p');
+    p.textContent = '서버에 연결하지 못했어요. 잠시 뒤 다시 시도해 주세요.';
+    box.appendChild(p);
   }
-  sendBtn.disabled = false;
+  toBottom();
+  busy = false;
+  sendBtn.disabled = !input.value.trim();
   input.focus();
 }
 
-sendBtn.onclick = () => { if (input.value.trim()) send(input.value.trim()); };
-input.addEventListener('keydown', e => { if (e.key === 'Enter' && input.value.trim()) send(input.value.trim()); });
+/* ---------- 입력창 ---------- */
+function autoGrow(){
+  input.style.height = 'auto';
+  input.style.height = Math.min(input.scrollHeight, 132) + 'px';
+}
+function syncSend(){ sendBtn.disabled = !input.value.trim() || busy; }
 
-addMsg('안녕하세요! 약물 상호작용 확인 챗봇 약톡이에요.\n두 가지 약을 함께 드셔도 되는지, 부작용·복용법이 궁금한 약이 있는지 물어보세요.\n\n예) "타이레놀이랑 판콜 같이 먹어도 돼?"\n예) "게보린 부작용 알려줘"', 'bot');
+input.addEventListener('input', () => { autoGrow(); syncSend(); });
+input.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey && !e.isComposing){
+    e.preventDefault();
+    if (input.value.trim()) send(input.value.trim());
+  }
+});
+sendBtn.onclick = () => { if (input.value.trim()) send(input.value.trim()); };
+
+renderEmpty();
 </script>
 </body>
 </html>
