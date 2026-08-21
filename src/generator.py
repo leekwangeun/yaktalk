@@ -45,10 +45,12 @@ class ResponseGenerator:
         try:
             enc = self.tok(prompt, return_tensors="pt", truncation=True, max_length=256)
             with self.torch.no_grad():
-                # 사실 복사가 핵심인 태스크라 샘플링 대신 greedy — 이름·수치 복사 충실도가 관건
+                # 사실 복사가 핵심인 태스크라 샘플링 대신 greedy — 이름·수치 복사 충실도가 관건.
+                # no_repeat_ngram_size는 쓰지 않는다: 이 태스크는 약 이름·성분명을 그대로,
+                # 때로는 한 문장에 두 번 반복해야 하는데 n-gram 반복을 금지하면 모델이
+                # 글자를 비틀어 이름을 망가뜨린다 (예: 아세트아미노펜 → '아세세트아미노에펜').
                 out = self.model.generate(
                     **enc, max_new_tokens=120, do_sample=False,
-                    no_repeat_ngram_size=3,
                     pad_token_id=self.tok.pad_token_id or self.tok.eos_token_id,
                     eos_token_id=self.tok.eos_token_id)
             text = self.tok.decode(out[0][enc["input_ids"].shape[1]:], skip_special_tokens=True).strip()
@@ -65,9 +67,9 @@ class ResponseGenerator:
         for n in re.findall(r"\d[\d,\.]*", text):
             if n not in in_nums:
                 return False
-        # 2) 약 이름 검증: 각 약 이름의 앞 3글자가 출력에 등장해야 함
+        # 2) 약 이름 검증: 이름을 줄여 쓰는 건 허용하되 글자가 망가지면 폐기
         for name in filter(None, [drug_a, drug_b]):
-            if name[:3] not in text:
+            if not self._name_intact(name, text):
                 return False
         # 3) 성분 검증: 입력에 없는 성분명이 출력에 등장하면 폐기
         for ing in self.ingredient_vocab:
@@ -86,4 +88,30 @@ class ResponseGenerator:
             return False
         if level == "정보없음" and any(k in text for k in ("금기 조합", "드시지 마세요")):
             return False
+        # 6) 괄호 짝 검증: 짝이 안 맞으면 이름·효능군 표기가 깨진 것
+        #    (예: '같은 효능군해열진단용제)' — 여는 괄호가 없고 용어도 변형됨)
+        if text.count("(") != text.count(")") or text.count("[") != text.count("]"):
+            return False
         return True
+
+    @staticmethod
+    def _name_intact(name: str, text: str) -> bool:
+        """약 이름이 온전한 형태로 인용됐는지 확인.
+
+        모델이 긴 이름을 앞부분만 따서 쓰는 것은 자연스러우므로 허용한다.
+        (타이레놀정500밀리그람(아세트아미노펜) → "타이레놀정과 ...")
+        다만 글자 사이에 공백을 끼워 넣어 이름을 망가뜨리는 것은 막는다.
+        (영진아스피린장용정 → "영진아 스피린장용은 ..." )
+        """
+        ns_name = re.sub(r"\s+", "", name)
+        ns_text = re.sub(r"\s+", "", text)
+        # 공백을 무시했을 때 출력에 실제로 등장한 가장 긴 접두사
+        hit = ""
+        for i in range(len(ns_name), 0, -1):
+            if ns_name[:i] in ns_text:
+                hit = ns_name[:i]
+                break
+        if len(hit) < min(len(ns_name), 4):
+            return False
+        # 그 접두사는 출력에도 공백 없이 그대로 있어야 한다
+        return hit in text
