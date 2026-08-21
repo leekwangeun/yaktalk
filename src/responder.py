@@ -109,11 +109,16 @@ class Responder:
                             drugs=[self._drug_info(x) for x in confirmed],
                             clarify={"question": q, "options": m.candidates[:5], "rest": rest})
 
-        # 확정된 약을 엔티티(제품 또는 순수 성분)로 해석
+        # 확정된 약을 엔티티(제품 또는 순수 성분)로 해석.
+        # 같은 약을 두 번 말하거나("타이레놀이랑 타이레놀"), 제품명과 성분명으로
+        # 각각 말해 같은 제품으로 해석되는 경우 중복을 제거한다.
+        # 남겨두면 자기 자신과 성분중복으로 판정돼 엉뚱한 경고가 나간다.
         entities = []
+        seen = set()
         for mt in confirmed:
             ent = self._resolve_entity(mt)
-            if ent:
+            if ent and ent.display not in seen:
+                seen.add(ent.display)
                 entities.append(ent)
 
         # 성분 질문 처리 — 약 1개 + 성분 질문이면 성분 목록으로 응답한다.

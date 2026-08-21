@@ -6,7 +6,7 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from dictionary import DrugDictionary
 from generator import ResponseGenerator
@@ -34,15 +34,25 @@ print(f"엔진 준비 완료 (NLU 모델: {'꺼짐' if _lite else '켜짐'}, "
       f"KoGPT2 생성기: {'켜짐' if _generator.available else '꺼짐(템플릿)'})")
 
 
+# 사람이 실제로 던지는 질문 길이의 상한. 이보다 길면 유사도 매칭이 어절 수에
+# 비례해 느려져 응답이 지연된다(장문 입력으로 수 분간 멈추는 것을 확인).
+MAX_MESSAGE_LEN = 300
+
+
 class ChatRequest(BaseModel):
     message: str
     elderly: bool = False
     pregnant: bool = False
-    age: int | None = None
+    # 나이는 0~120만 허용. 범위를 열어두면 음수가 '12세 미만 금기'로 판정되는 등
+    # 잘못된 입력이 의학적 판정으로 이어진다.
+    age: int | None = Field(default=None, ge=0, le=120)
 
 
 @app.post("/api/chat")
 def chat(req: ChatRequest):
+    if len(req.message) > MAX_MESSAGE_LEN:
+        return {"reply": f"질문이 너무 길어요. 약 이름 위주로 {MAX_MESSAGE_LEN}자 이내로 물어봐 주세요.",
+                "level": None, "intent": "기타", "drugs": [], "clarify": None, "findings": []}
     r = _responder.handle(req.message, elderly=req.elderly, pregnant=req.pregnant, age=req.age)
     return {"reply": r.reply, "level": r.level, "intent": r.intent,
             "drugs": r.drugs, "clarify": r.clarify, "findings": r.findings}

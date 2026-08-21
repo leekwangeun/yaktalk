@@ -290,12 +290,18 @@ class RiskEngine:
                 f"같은 효능군({code}) 중복"))
         return out
 
+    @staticmethod
+    def _detail(head: str, reason: str) -> str:
+        """근거 문장 조립. 식약처 원본에 사유가 비어 있는 행이 있어,
+        그대로 이으면 '아스피린: ' 처럼 콜론만 남는다."""
+        return f"{head}: {reason}" if reason else head
+
     def _single_rule(self, table: str, check: str, level: str, mcodes, dcodes) -> list[Finding]:
         out = []
         for r in self.conn.execute(f"SELECT * FROM {table}"):
             if self._side_hits(r["mix_type"], r["ori"], r["ingr_code"], mcodes, dcodes):
                 reason = (r["prohibit_content"] or "").strip()
-                out.append(Finding(check, level, f"{r['ingr_name']}: {reason}"))
+                out.append(Finding(check, level, self._detail(r["ingr_name"], reason)))
         return out
 
     def _pregnancy(self, mcodes, dcodes) -> list[Finding]:
@@ -304,6 +310,6 @@ class RiskEngine:
             if self._side_hits(r["mix_type"], r["ori"], r["ingr_code"], mcodes, dcodes):
                 level = "금기" if r["grade"] == "1등급" else "주의"
                 reason = (r["prohibit_content"] or "").strip()
-                out.append(Finding("임부금기", level,
-                    f"{r['ingr_name']} (임부금기 {r['grade']}): {reason}"))
+                out.append(Finding("임부금기", level, self._detail(
+                    f"{r['ingr_name']} (임부금기 {r['grade']})", reason)))
         return out
