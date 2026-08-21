@@ -7,10 +7,18 @@
 
 ## 라이브 데모
 
-- **웹 챗봇 (바로 사용)**: https://yaktalk-one.vercel.app
-- 백엔드 API: https://kwangeun2-yaktalk-api.hf.space
+프론트엔드는 두 곳에 배포되어 있으며 같은 백엔드를 사용합니다. 어느 쪽으로 접속해도 동일하게 동작합니다.
+
+| 배포 | 주소 | 비고 |
+|---|---|---|
+| Netlify | https://majestic-cucurucho-d48c4c.netlify.app | 공모전 제출용 |
+| Vercel | https://yaktalk-one.vercel.app | GitHub `web/` 자동 배포 |
+| 백엔드 API | https://kwangeun2-yaktalk-api.hf.space | FastAPI · 채팅 UI도 함께 서빙 |
 
 예) *"타이레놀이랑 판콜 같이 먹어도 돼?"* → 두 약 모두 아세트아미노펜 함유 → **성분중복 주의** 안내
+
+> 무료 티어라 한동안 접속이 없으면 백엔드가 절전 상태로 들어갑니다. 첫 질문의 답이 늦어질 수 있으며,
+> 이 경우 화면에 대기 안내가 표시됩니다.
 
 ## 특징
 
@@ -69,6 +77,15 @@ Hugging Face Space([kwangeun2/yaktalk-api](https://huggingface.co/spaces/kwangeu
 pip install -r requirements.txt
 uvicorn api:app --app-dir src --port 8000
 # http://localhost:8000 에서 채팅 UI까지 서빙
+```
+
+### Netlify 배포본 만들기
+
+Netlify Drop은 파일 하나만 올리므로, 백엔드 주소를 인라인으로 박은 단일 HTML을 생성합니다.
+
+```bash
+python scripts/build_netlify.py
+# netlify/index.html 생성 → app.netlify.com/drop 에 끌어다 놓기
 ```
 
 ## 데이터·모델 재현
