@@ -45,7 +45,8 @@ FOOD_ALCOHOL_WORDS = ["술", "음주", "맥주", "소주", "와인", "알코올"
                       "커피", "카페인", "우유", "자몽", "홍삼", "녹차"]
 # 성분 질문 신호어
 INGREDIENT_WORDS = ["성분", "뭐가 들어", "뭐 들어", "무엇이 들어", "어떤 성분",
-                    "무슨 성분", "성분이 뭐", "함유", "들어있", "들어 있"]
+                    "무슨 성분", "성분이 뭐", "함유", "들어있", "들어 있",
+                    "뭐 들었", "뭐뭐 들었", "뭐가 들었", "들어가", "뭐로 만든", "뭐로 만들"]
 
 
 class Responder:
@@ -86,12 +87,18 @@ class Responder:
             notice += (f"참고로 약과 {food} 등 음식·음주와의 상호작용은 아직 지원하지 않아요. "
                        "약과 약 사이만 확인해 드릴 수 있어요.\n")
 
+        # 성분 질문 여부 — 키워드 규칙 OR 의도 모델의 '성분' 분류(재학습 후) 이중 감지.
+        is_ingredient_q = intent == "성분" or any(k in message for k in INGREDIENT_WORDS)
+
         # 되묻기: 애매한 이름이나 카테고리어가 있으면 후보 제시.
         # 카테고리어·접두일치(고신뢰, score≥95)는 사용자가 실제로 넣은 약이므로 확정 개수와
         # 무관하게 되묻는다. 저신뢰 유사도 제안만 확정 2개 이상일 때 잡음으로 무시한다.
+        # 단, 명확한 성분 질문 + 확정 약이 있으면 되묻기 대신 성분 답을 우선한다.
         pend = suggests + categories
         strong = [m for m in pend if m.status == "category" or m.score >= 95]
         ask = strong if strong else (pend if len(confirmed) < 2 else [])
+        if is_ingredient_q and len(confirmed) >= 1:
+            ask = []
         if ask:
             m = ask[0]
             what = "말씀하신 약" if m.status == "suggest" else f"'{m.surface}'"
@@ -109,9 +116,7 @@ class Responder:
             if ent:
                 entities.append(ent)
 
-        # 성분 질문 처리 — 키워드 규칙 OR 의도 모델의 '성분' 분류(재학습 후) 이중 감지.
-        # 약 1개 + 성분 질문이면 성분 목록으로 응답한다.
-        is_ingredient_q = intent == "성분" or any(k in message for k in INGREDIENT_WORDS)
+        # 성분 질문 처리 — 약 1개 + 성분 질문이면 성분 목록으로 응답한다.
         if is_ingredient_q and len(entities) == 1:
             return self._ingredient_answer(entities[0], notice)
 

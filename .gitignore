@@ -2,6 +2,12 @@
 secrets.json
 public data api/
 *인증키*.txt
+recovery-codes.txt
+*recovery*code*
+*백업코드*
+
+# 배포용 빌드 산출물 (scripts/build_netlify.py로 web/에서 생성)
+netlify/
 
 # 대용량 — GitHub 용량 제한
 models/
