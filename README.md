@@ -11,8 +11,8 @@
 
 | 배포 | 주소 | 비고 |
 |---|---|---|
-| Netlify | https://majestic-cucurucho-d48c4c.netlify.app | 공모전 제출용 |
-| Vercel | https://yaktalk-one.vercel.app | GitHub `web/` 자동 배포 |
+| Netlify | https://majestic-cucurucho-d48c4c.netlify.app | 일상뒤집기 공모전 제출용 |
+| Vercel | https://yaktalk-one.vercel.app | GitHub `web/` 배포, 교내 제 2회 파이썬 경진대회 제출용 |
 | 백엔드 API | https://kwangeun2-yaktalk-api.hf.space | FastAPI · 채팅 UI도 함께 서빙 |
 
 예) *"타이레놀이랑 판콜 같이 먹어도 돼?"* → 두 약 모두 아세트아미노펜 함유 → **성분중복 주의** 안내
